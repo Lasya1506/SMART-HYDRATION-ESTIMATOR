@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Hydration Monitor Mobile App</title>
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Styles -->
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <div class="app-container">
+        <!-- GLOBAL ALERT TOAST -->
+        <div id="global-toast" class="global-toast hidden">
+            <div class="toast-icon">
+                <i class="fa-solid fa-droplet-slash"></i>
+            </div>
+            <div class="toast-content">
+                <h4>Dehydration Alert!</h4>
+                <p>Your hydration has dropped below 60%. Please drink water.</p>
+            </div>
+            <button id="close-toast-btn" class="toast-close">&times;</button>
+        </div>
+
+        <!-- HEADER -->
+        <header class="app-header">
+            <div class="header-content">
+                <i class="fa-solid fa-droplet text-blue"></i>
+                <h1>HydraSense</h1>
+                <div class="header-status">
+                    <span id="ble-indicator" class="status-dot disconnected"></span>
+                </div>
+            </div>
+        </header>
+
+        <!-- MAIN CONTENT AREA -->
+        <main class="app-main">
+            
+            <!-- SCREEN 1: DASHBOARD -->
+            <section id="screen-dashboard" class="screen active">
+                <h2 class="screen-title">Dashboard</h2>
+                
+                <div class="hydration-circle-container">
+                    <div class="hydration-circle" id="hydration-circle">
+                        <div class="circle-inner">
+                            <i class="fa-solid fa-water drop-icon"></i>
+                            <div class="percentage"><span id="hyd-percent">--</span>%</div>
+                            <div class="status-text" id="hyd-status-text">Waiting...</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="sensor-cards">
+                    <div class="sensor-card">
+                        <div class="sensor-icon"><i class="fa-solid fa-temperature-half"></i></div>
+                        <div class="sensor-info">
+                            <div class="sensor-label">Body Temp</div>
+                            <div class="sensor-val"><span id="val-temp">--</span> °C</div>
+                        </div>
+                    </div>
+                    <div class="sensor-card">
+                        <div class="sensor-icon"><i class="fa-solid fa-bolt"></i></div>
+                        <div class="sensor-info">
+                            <div class="sensor-label">Impedance</div>
+                            <div class="sensor-val"><span id="val-imp">--</span> Ω</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="action-container">
+                    <button class="primary-btn pulse-btn" id="btn-simulate-connection">
+                        <i class="fa-solid fa-satellite-dish"></i> Connect ESP32
+                    </button>
+                    <button class="secondary-btn" id="btn-check-hydration">
+                        <i class="fa-solid fa-stethoscope"></i> Check Hydration
+                    </button>
+                    <button class="secondary-btn" id="btn-algorithm-info" style="border-color: var(--status-good); color: var(--status-good);">
+                        <i class="fa-solid fa-microchip"></i> How it Works
+                    </button>
+                </div>
+            </section>
+
+            <!-- SCREEN 2: DEHYDRATION ALERT -->
+            <section id="screen-alert" class="screen">
+                <h2 class="screen-title">Alert Status</h2>
+                
+                <div class="alert-banner" id="alert-banner">
+                    <i class="fa-solid fa-triangle-exclamation alert-icon"></i>
+                    <h3 id="alert-title">Monitoring Active</h3>
+                    <p id="alert-message">Your hydration levels are currently being monitored.</p>
+                </div>
+
+                <div class="alert-details-card">
+                    <div class="detail-row">
+                        <span>Current Hydration:</span>
+                        <strong id="alert-hyd-percent" class="text-blue">--%</strong>
+                    </div>
+                    <div class="detail-row">
+                        <span>Status:</span>
+                        <strong id="alert-status-name">Unknown</strong>
+                    </div>
+                </div>
+
+                <h3 class="section-subtitle">Suggested Actions</h3>
+                <ul class="action-list" id="suggested-actions">
+                    <li><i class="fa-solid fa-glass-water"></i> Drink regular water intervals</li>
+                    <li><i class="fa-solid fa-bed"></i> Maintain normal activity</li>
+                </ul>
+
+                <button class="primary-btn mt-20" id="btn-view-health">
+                    <i class="fa-solid fa-heart-pulse"></i> View Health Tips
+                </button>
+            </section>
+
+            <!-- SCREEN 3: ANALYTICS -->
+            <section id="screen-analytics" class="screen">
+                <h2 class="screen-title">Hydration Analytics</h2>
+                
+                <div class="chart-card">
+                    <h3>Daily History</h3>
+                    <div class="chart-container">
+                        <canvas id="hydrationChart"></canvas>
+                    </div>
+                </div>
+
+                <div class="stats-grid">
+                    <div class="stat-box">
+                        <div class="stat-val" id="stat-avg">--%</div>
+                        <div class="stat-label">Daily Average</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-val" id="stat-intake">0 ml</div>
+                        <div class="stat-label">Est. Intake</div>
+                    </div>
+                </div>
+
+                <div class="time-tracking">
+                    <h3>Daily Breakdown</h3>
+                    <div class="time-row">
+                        <span>Morning (8 AM)</span>
+                        <div class="progress-bar"><div class="progress-fill" style="width: 80%"></div></div>
+                    </div>
+                    <div class="time-row">
+                        <span>Afternoon (1 PM)</span>
+                        <div class="progress-bar"><div class="progress-fill bg-orange" style="width: 65%"></div></div>
+                    </div>
+                    <div class="time-row">
+                        <span>Evening (7 PM)</span>
+                        <div class="progress-bar"><div class="progress-fill bg-red" style="width: 40%"></div></div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- SCREEN 4: PROFILE -->
+            <section id="screen-profile" class="screen">
+                <h2 class="screen-title">User Profile</h2>
+                
+                <div class="profile-header">
+                    <div class="profile-avatar">
+                        <i class="fa-solid fa-user"></i>
+                    </div>
+                    <div class="profile-name">John Doe</div>
+                    <div class="profile-id">ID: HYD-8492</div>
+                </div>
+
+                <div class="settings-form">
+                    <div class="form-group">
+                        <label>Age</label>
+                        <input type="number" id="setting-age" value="22" min="10" max="100">
+                    </div>
+                    <div class="form-group">
+                        <label>Weight (kg)</label>
+                        <input type="number" id="setting-weight" value="70" min="30" max="200">
+                    </div>
+                    <div class="form-group">
+                        <label>Daily Water Goal (ml)</label>
+                        <input type="number" id="setting-goal" value="2500" step="100">
+                    </div>
+                    
+                    <div class="settings-divider"></div>
+                    
+                    <div class="form-switch">
+                        <span>Smart Notifications</span>
+                        <label class="switch">
+                            <input type="checkbox" checked id="setting-notifications">
+                            <span class="slider round"></span>
+                        </label>
+                    </div>
+                    <div class="form-switch">
+                        <span>Bluetooth Auto-Sync</span>
+                        <label class="switch">
+                            <input type="checkbox" checked id="setting-bluetooth">
+                            <span class="slider round"></span>
+                        </label>
+                    </div>
+
+                    <button class="primary-btn mt-20" id="btn-save-profile">
+                        Save Settings
+                    </button>
+                </div>
+            </section>
+
+        </main>
+
+        <!-- BOTTOM NAVIGATION -->
+        <nav class="app-nav">
+            <a href="#" class="nav-item active" data-target="screen-dashboard">
+                <i class="fa-solid fa-house"></i>
+                <span>Home</span>
+            </a>
+            <a href="#" class="nav-item" data-target="screen-alert" id="nav-alert">
+                <i class="fa-solid fa-bell"></i>
+                <span>Alerts</span>
+                <span class="nav-badge hidden" id="alert-badge">!</span>
+            </a>
+            <a href="#" class="nav-item" data-target="screen-analytics">
+                <i class="fa-solid fa-chart-pie"></i>
+                <span>Analytics</span>
+            </a>
+            <a href="#" class="nav-item" data-target="screen-profile">
+                <i class="fa-solid fa-user-gear"></i>
+                <span>Profile</span>
+            </a>
+        </nav>
+    </div>
+
+    <!-- Health Tips Modal -->
+    <div class="modal" id="health-modal">
+        <div class="modal-content">
+            <span class="close-modal">&times;</span>
+            <h3>💧 Hydration Tips</h3>
+            <p>1. Keep a water bottle with you at all times.</p>
+            <p>2. Drink water before, during, and after a workout.</p>
+            <p>3. When you're feeling hungry, drink water. Thirst is often confused with hunger.</p>
+            <p>4. Drink on a schedule if you have trouble remembering.</p>
+            <button class="secondary-btn mt-20 close-modal-btn">Got it</button>
+        </div>
+    </div>
+
+    <!-- Algorithm Modal -->
+    <div class="modal" id="algorithm-modal">
+        <div class="modal-content" style="max-height: 80vh; overflow-y: auto;">
+            <span class="close-modal">&times;</span>
+            <h3 style="color: var(--status-good);">🧬 Sensor Fusion Algorithm</h3>
+            <p>Our hydration estimation uses <strong>Sensor Fusion</strong> combining bio-impedance and skin temperature from the ESP32 wearable.</p>
+            <br>
+            <p><strong>1. Bio-Impedance (Ω):</strong><br>
+            Water conducts electricity. Higher tissue impedance means less water. Values over 500Ω reduce the hydration score.</p>
+            <br>
+            <p><strong>2. Temperature (°C):</strong><br>
+            Skin temp affects tissue resistance. We apply a thermal penalty if temp rises above 37.5°C, as heat causes sweating and compounds dehydration.</p>
+            <br>
+            <p><strong>Calculation Formula:</strong><br>
+            <em style="font-size: 0.9rem; background: #eee; padding: 5px; border-radius: 5px; display: block; margin-top: 5px;">Score = 100 - [(Imp - 500) × 0.1] - [(Temp - 37.5) × 10]</em></p>
+            <button class="secondary-btn mt-20 close-modal-btn" style="border-color: var(--status-good); color: var(--status-good);">Understood</button>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
